@@ -1,8 +1,17 @@
-from constants import *
-from pygame.math import Vector2
-import pygame
+from __future__ import annotations
+
 from random import choice
-from numpy import rot90
+from typing import List
+
+import numpy
+import pygame
+from pygame.math import Vector2
+
+from constants import (
+    CELL_SIZE,
+    DISPLAY_WIDTH,
+    TETROMINO_COLORS
+)
 
 
 class Tetromino:
@@ -39,7 +48,8 @@ class Tetromino:
     
     def __init__(self):
         self.__position = Vector2(DISPLAY_WIDTH // CELL_SIZE // 2, -1)
-        self.body = self.tetrominos["straight"]  # choice(list(self.tetrominos.values()))
+        self.body = choice(list(self.tetrominos.values()))
+        self.color = choice(TETROMINO_COLORS)
     
     @property
     def position(self):
@@ -47,12 +57,8 @@ class Tetromino:
     
     @position.setter
     def position(self, value: Vector2):
-        print(f"setting value = {value}")
-        if 0 <= value.x:
-            self.__position = value
-        else:
-            self.__position = Vector2(0, value.y)
-            
+        self.__position = value
+    
     def draw(self, display) -> None:
         for i, row in enumerate(self.body):
             for j, c in enumerate(row):
@@ -60,10 +66,33 @@ class Tetromino:
                     x_pos = (i + self.position.x) * CELL_SIZE
                     y_pos = (j + self.position.y) * CELL_SIZE
                     cell_rect = pygame.Rect(x_pos, y_pos, CELL_SIZE, CELL_SIZE)
-                    pygame.draw.rect(surface=display, color=WHITE, rect=cell_rect)
+                    pygame.draw.rect(surface=display, color=self.color, rect=cell_rect)
     
     def move(self, direction: Vector2) -> None:
         self.position += direction
     
     def rotate(self) -> None:
-        self.body = rot90(self.body)
+        self.body = numpy.rot90(self.body)
+    
+    def check_collisions(self, stuck_tetrominoes: List[Tetromino]) -> bool:
+        my_vectors = self.body_to_vectors(self)
+        # for vector in my_vectors:
+        #     vector += Vector2(0, 1)
+        for tetromino in stuck_tetrominoes:
+            his_vectors = self.body_to_vectors(tetromino)
+            for vector in my_vectors:
+                if vector + Vector2(0, 1) in his_vectors:
+                    return True
+        for vector in my_vectors:
+            if vector.y == 19:
+                return True
+        return False
+    
+    @staticmethod
+    def body_to_vectors(tetr: Tetromino) -> List[Vector2]:
+        vectors = []
+        for i, row in enumerate(tetr.body):
+            for j, col in enumerate(row):
+                if col != 0:
+                    vectors.append(Vector2(i, j) + tetr.position)
+        return vectors

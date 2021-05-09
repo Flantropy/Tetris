@@ -1,9 +1,12 @@
 import sys
+from typing import List
+
 import pygame
-from classes.tetromino import Tetromino
 from pygame.locals import *
-from constants import *
 from pygame.math import Vector2
+
+from classes.tetromino import Tetromino
+from constants import *
 
 
 class Game:
@@ -14,6 +17,7 @@ class Game:
         self.update = pygame.USEREVENT
         pygame.time.set_timer(self.update, UPDATE_RATE)
         self.tetromino = Tetromino()
+        self.stuck_tetrominoes: List[Tetromino] = []
     
     def run(self):
         while True:
@@ -34,15 +38,22 @@ class Game:
             # RENDER
             self.display.fill(BLACK)
             self.tetromino.draw(self.display)
+            for tetromino in self.stuck_tetrominoes:
+                tetromino.draw(self.display)
             pygame.display.update()
             
             # TICK CLOCK
             self.clock.tick(FPS)
     
     def update_state(self):
-        self.tetromino.move(Vector2(0, 1))
-        print(self.tetromino.position.x)
-    
+        if not self.tetromino.check_collisions(self.stuck_tetrominoes):
+            self.tetromino.move(Vector2(0, 1))
+        else:
+            # self.tetromino.position -= Vector2(0, -1)
+            self.stuck_tetrominoes.append(self.tetromino)
+            self.tetromino = Tetromino()
+        print([(v.x, v.y) for v in Tetromino.body_to_vectors(self.tetromino)])
+        
     @staticmethod
     def shut_down():
         pygame.quit()
