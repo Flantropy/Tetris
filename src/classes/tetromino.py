@@ -1,21 +1,16 @@
-from __future__ import annotations
-
-from random import choice
 from typing import List
-
-import numpy
-import pygame
+from random import choice
+from numpy import rot90
 from pygame.math import Vector2
-
 from constants import (
-    CELL_SIZE,
-    DISPLAY_WIDTH,
-    TETROMINO_COLORS
+    TETROMINO_COLORS,
+    CELLS_IN_HORIZONTAL,
+    CELLS_IN_VERTICAL
 )
 
 
 class Tetromino:
-    tetrominos = dict(
+    shapes = dict(
         straight=[
             [0, 0, 0, 0],
             [1, 1, 1, 1],
@@ -47,52 +42,34 @@ class Tetromino:
     )
     
     def __init__(self):
-        self.__position = Vector2(DISPLAY_WIDTH // CELL_SIZE // 2, -1)
-        self.body = choice(list(self.tetrominos.values()))
+        self.position = Vector2(CELLS_IN_HORIZONTAL//2, -1)
+        self.body = choice(list(self.shapes.values()))
         self.color = choice(TETROMINO_COLORS)
-    
-    @property
-    def position(self):
-        return self.__position
-    
-    @position.setter
-    def position(self, value: Vector2):
-        self.__position = value
-    
-    def draw(self, display) -> None:
-        for i, row in enumerate(self.body):
-            for j, c in enumerate(row):
-                if c == 1:
-                    x_pos = (i + self.position.x) * CELL_SIZE
-                    y_pos = (j + self.position.y) * CELL_SIZE
-                    cell_rect = pygame.Rect(x_pos, y_pos, CELL_SIZE, CELL_SIZE)
-                    pygame.draw.rect(surface=display, color=self.color, rect=cell_rect)
-    
-    def move(self, direction: Vector2) -> None:
-        self.position += direction
+        self.occupied_cells_on_gird = []  # List to track collisions
+
+    def move(self, direction: Vector2) -> bool:
+        if self.is_move_possible(direction):
+            self.position += direction
+            return True
+        return False
+        
+    def is_move_possible(self, direction) -> bool:
+        for vector in self.get_vectors():
+            vector += direction
+            if not 0 <= vector.x < CELLS_IN_HORIZONTAL or vector.y >= CELLS_IN_VERTICAL:
+                return False
+            if vector in self.occupied_cells_on_gird:
+                return False
+        return True
     
     def rotate(self) -> None:
-        self.body = numpy.rot90(self.body)
-    
-    def check_collisions(self, stuck_tetrominoes: List[Tetromino]) -> bool:
-        my_vectors = self.body_to_vectors(self)
-        # for vector in my_vectors:
-        #     vector += Vector2(0, 1)
-        for tetromino in stuck_tetrominoes:
-            his_vectors = self.body_to_vectors(tetromino)
-            for vector in my_vectors:
-                if vector + Vector2(0, 1) in his_vectors:
-                    return True
-        for vector in my_vectors:
-            if vector.y == 19:
-                return True
-        return False
-    
-    @staticmethod
-    def body_to_vectors(tetr: Tetromino) -> List[Vector2]:
+        self.body = rot90(self.body)
+
+    def get_vectors(self) -> List[Vector2]:
         vectors = []
-        for i, row in enumerate(tetr.body):
-            for j, col in enumerate(row):
-                if col != 0:
-                    vectors.append(Vector2(i, j) + tetr.position)
+        for i, row in enumerate(self.body):
+            for j, pixel in enumerate(row):
+                if pixel != 0:
+                    vectors.append(Vector2(i, j) + self.position)
         return vectors
+
